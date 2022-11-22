@@ -11,7 +11,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-public class TOTP implements TOTPGenerator {
+public class TOTP implements TOTPGenerator, TOTPVerifier {
     private static final int DEFAULT_PASSWORD_LENGTH = 6;
     private static final HMACAlgorithm DEFAULT_HMAC_ALGORITHM = HMACAlgorithm.SHA1;
     private static final Duration DEFAULT_PERIOD = Duration.ofSeconds(30);
@@ -113,6 +113,28 @@ public class TOTP implements TOTPGenerator {
 
     private boolean validateTime(final long time) {
         return time > 0;
+    }
+
+
+    public boolean verify(final String code, final long counter, final int delayWindow) {
+        if (code.length() != passwordLength) return false;
+
+        for (int i = -delayWindow; i <= delayWindow; i++) {
+            String currentCode = generate(counter + i);
+            if (code.equals(currentCode)) return true;
+        }
+
+        return false;
+    }
+
+    public boolean verify(final String code) {
+        long counter = calculateCounter(period);
+        return verify(code, counter, 0);
+    }
+
+    public boolean verify(final String code, final int delayWindow) {
+        long counter = calculateCounter(period);
+        return verify(code, counter, delayWindow);
     }
 
     @Override
