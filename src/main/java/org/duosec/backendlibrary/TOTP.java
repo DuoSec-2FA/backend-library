@@ -9,8 +9,9 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
-public class TOTP {
+public class TOTP implements TOTPGenerator {
     private static final int DEFAULT_PASSWORD_LENGTH = 6;
     private static final HMACAlgorithm DEFAULT_HMAC_ALGORITHM = HMACAlgorithm.SHA1;
     private static final Duration DEFAULT_PERIOD = Duration.ofSeconds(30);
@@ -85,6 +86,33 @@ public class TOTP {
 
         // Left pad with 0s for an n-digit code
         return String.format("%0" + passwordLength + "d", truncatedHash);
+    }
+
+    // generate a time-based one-time password for current time interval
+    public String now() throws IllegalStateException {
+        long counter = calculateCounter(period);
+        return generate(counter);
+    }
+
+    // generate a time-based one-time password for a specific time based on seconds past 1970
+    public String at(final long secondsPast1970) throws IllegalArgumentException {
+        if (!validateTime(secondsPast1970))
+            throw new IllegalArgumentException("Time must be above zero");
+
+        long counter = calculateCounter(secondsPast1970, period);
+        return generate(counter);
+    }
+
+    private long calculateCounter(final long secondsPast1970, final Duration period) {
+        return TimeUnit.SECONDS.toMillis(secondsPast1970) / period.toMillis();
+    }
+
+    private long calculateCounter(final Duration period) {
+        return System.currentTimeMillis() / period.toMillis();
+    }
+
+    private boolean validateTime(final long time) {
+        return time > 0;
     }
 
     @Override
